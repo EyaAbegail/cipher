@@ -1,0 +1,64 @@
+Emoji Caesar Cipher: Documentation
+What Does Each Letter Emoji Represent?
+
+In this cipher, each letter of the alphabet (A-Z) is mapped to a specific emoji. These emojis serve as substitutes for letters when encrypting or decrypting messages. The emoji set used here is a simple 26-emoji array, one for each letter of the alphabet.
+
+Example Mapping (A to Z):
+
+A → 😀
+
+B → 😃
+
+C → 😄
+
+D → 😁
+
+E → 😆
+
+F → 😅
+
+G → 😂
+
+H → 🤣
+
+...
+
+Z → 😲
+
+Process of Encrypting a Message
+
+Input Text: The user types a message using regular letters (A-Z).
+
+Choose Shift: A shift value (1-25) is chosen. This determines how many positions the letters will be moved.
+
+Encrypt:
+
+Each letter in the message is replaced by its corresponding emoji, shifted by the chosen value.
+
+For example, if the shift value is 3, "A" becomes "D" (shifted 3 positions), which corresponds to the emoji 😁.
+
+Result: The encrypted message is displayed as a sequence of emojis.
+
+Process of Decrypting a Message
+
+Input Emoji Text: The user pastes a sequence of emojis.
+
+Choose Shift: The same shift value used in encryption is applied.
+
+Decrypt:
+
+Each emoji is mapped back to the corresponding letter, shifted in the opposite direction (to reverse the encryption).
+
+For example, if the emoji is 😁 (which represents "D"), a shift value of 3 would decrypt it to "A".
+
+Result: The decrypted message is displayed as normal text.
+
+Encryption and Decryption Example
+
+Original Text: "HELLO"
+
+Shift Value: 3
+
+Encrypted Text: "🤣🤣🍎🍎🍎" (Using emojis corresponding to H, E, L, L, O after shifting by 3 positions)
+
+Decrypted Text: "HELLO" (After reversing the shift by 3)
