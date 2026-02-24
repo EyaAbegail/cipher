@@ -1,0 +1,663 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Emoji Cipher</title>
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@700;800&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0a0a0f;
+      --surface: #12121a;
+      --surface2: #1a1a28;
+      --accent: #ff3cac;
+      --accent2: #784ba0;
+      --accent3: #2b86c5;
+      --glow: rgba(255, 60, 172, 0.4);
+      --text: #f0e8ff;
+      --muted: #6b6890;
+      --mono: 'Space Mono', monospace;
+      --display: 'Syne', sans-serif;
+    }
+
+    * { box-sizing: border-box; margin: 0; padding: 0; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: var(--mono);
+      min-height: 100vh;
+      overflow-x: hidden;
+    }
+
+    body::before {
+      content: '';
+      position: fixed;
+      inset: 0;
+      background-image:
+        linear-gradient(rgba(255,60,172,0.04) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(255,60,172,0.04) 1px, transparent 1px);
+      background-size: 40px 40px;
+      pointer-events: none;
+      z-index: 0;
+    }
+
+    .container {
+      position: relative;
+      z-index: 1;
+      max-width: 900px;
+      margin: 0 auto;
+      padding: 40px 20px 80px;
+    }
+
+    header {
+      text-align: center;
+      margin-bottom: 48px;
+      animation: fadeDown 0.6s ease both;
+    }
+
+    .tag {
+      display: inline-block;
+      font-size: 10px;
+      letter-spacing: 0.3em;
+      text-transform: uppercase;
+      color: var(--accent);
+      border: 1px solid var(--accent);
+      padding: 4px 12px;
+      border-radius: 2px;
+      margin-bottom: 16px;
+    }
+
+    h1 {
+      font-family: var(--display);
+      font-size: clamp(36px, 7vw, 72px);
+      font-weight: 800;
+      line-height: 1;
+      background: linear-gradient(135deg, #ff3cac, #784ba0, #2b86c5);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      background-clip: text;
+      margin-bottom: 12px;
+      letter-spacing: -2px;
+    }
+
+    .subtitle {
+      color: var(--muted);
+      font-size: 13px;
+      letter-spacing: 0.1em;
+    }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid rgba(255,60,172,0.15);
+      border-radius: 12px;
+      padding: 28px;
+      margin-bottom: 20px;
+      animation: fadeUp 0.5s ease both;
+    }
+
+    .card:nth-child(2) { animation-delay: 0.1s; }
+    .card:nth-child(3) { animation-delay: 0.15s; }
+    .card:nth-child(4) { animation-delay: 0.2s; }
+    .card:nth-child(5) { animation-delay: 0.25s; }
+
+    .card-label {
+      font-size: 10px;
+      letter-spacing: 0.25em;
+      text-transform: uppercase;
+      color: var(--accent);
+      margin-bottom: 20px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .card-label::after {
+      content: '';
+      flex: 1;
+      height: 1px;
+      background: rgba(255,60,172,0.2);
+    }
+
+    /* ── Alphabet Map ── */
+    .alpha-map {
+      display: grid;
+      grid-template-columns: repeat(auto-fill, minmax(64px, 1fr));
+      gap: 6px;
+    }
+
+    .alpha-cell {
+      background: var(--surface2);
+      border: 1px solid rgba(255,60,172,0.12);
+      border-radius: 8px;
+      padding: 8px 4px 6px;
+      text-align: center;
+      transition: all 0.15s;
+      cursor: default;
+    }
+
+    .alpha-cell:hover {
+      border-color: var(--accent);
+      transform: translateY(-2px);
+      box-shadow: 0 4px 16px var(--glow);
+    }
+
+    .alpha-cell .emoji-rep { font-size: 22px; display: block; line-height: 1; }
+    .alpha-cell .letter   { font-size: 10px; color: var(--muted); display: block; margin-top: 4px; letter-spacing: 0.1em; }
+    .alpha-cell .shifted-letter { font-size: 9px; color: var(--accent); display: block; margin-top: 1px; letter-spacing: 0.1em; }
+
+    .alpha-cell.highlight {
+      border-color: var(--accent);
+      background: rgba(255,60,172,0.1);
+      box-shadow: 0 0 10px var(--glow);
+    }
+
+    /* ── Shift ── */
+    .shift-row {
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .shift-stepper {
+      display: flex;
+      align-items: center;
+      border: 1px solid rgba(255,60,172,0.3);
+      border-radius: 8px;
+      overflow: hidden;
+    }
+
+    .step-btn {
+      background: var(--surface2);
+      border: none;
+      color: var(--accent);
+      width: 44px; height: 44px;
+      font-size: 20px;
+      cursor: pointer;
+      font-family: var(--mono);
+      transition: background 0.15s;
+    }
+
+    .step-btn:hover { background: rgba(255,60,172,0.15); }
+
+    .shift-value {
+      width: 60px; height: 44px;
+      background: var(--surface2);
+      border: none;
+      border-left: 1px solid rgba(255,60,172,0.2);
+      border-right: 1px solid rgba(255,60,172,0.2);
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 20px;
+      font-weight: 700;
+      text-align: center;
+      outline: none;
+    }
+
+    .shift-value::-webkit-outer-spin-button,
+    .shift-value::-webkit-inner-spin-button { -webkit-appearance: none; }
+
+    .shift-dots {
+      display: flex;
+      gap: 5px;
+      flex-wrap: wrap;
+      margin-top: 14px;
+    }
+
+    .shift-dot {
+      width: 9px; height: 9px;
+      border-radius: 50%;
+      background: rgba(255,60,172,0.15);
+      transition: all 0.2s;
+    }
+
+    .shift-dot.active {
+      background: var(--accent);
+      box-shadow: 0 0 6px var(--glow);
+    }
+
+    /* ── Textarea ── */
+    textarea {
+      width: 100%;
+      min-height: 90px;
+      background: var(--surface2);
+      border: 1px solid rgba(255,60,172,0.2);
+      border-radius: 8px;
+      color: var(--text);
+      font-family: var(--mono);
+      font-size: 18px;
+      padding: 14px;
+      resize: vertical;
+      outline: none;
+      transition: border-color 0.2s;
+      line-height: 1.6;
+    }
+
+    textarea:focus { border-color: var(--accent); }
+
+    .char-count { text-align: right; font-size: 11px; color: var(--muted); margin-top: 6px; }
+
+    .actions {
+      display: flex;
+      gap: 12px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .btn {
+      flex: 1;
+      min-width: 130px;
+      padding: 14px 20px;
+      border: none;
+      border-radius: 8px;
+      font-family: var(--mono);
+      font-size: 13px;
+      font-weight: 700;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      cursor: pointer;
+      transition: all 0.2s;
+      position: relative;
+      overflow: hidden;
+    }
+
+    .btn-encrypt {
+      background: linear-gradient(135deg, var(--accent), var(--accent2));
+      color: #fff;
+      box-shadow: 0 4px 20px var(--glow);
+    }
+
+    .btn-encrypt:hover { transform: translateY(-1px); box-shadow: 0 6px 28px var(--glow); }
+
+    .btn-decrypt {
+      background: linear-gradient(135deg, var(--accent3), var(--accent2));
+      color: #fff;
+      box-shadow: 0 4px 20px rgba(43,134,197,0.4);
+    }
+
+    .btn-decrypt:hover { transform: translateY(-1px); }
+
+    .btn-clear {
+      background: var(--surface2);
+      color: var(--muted);
+      border: 1px solid rgba(255,255,255,0.08);
+      flex: 0 0 auto;
+      min-width: 90px;
+    }
+
+    .btn-clear:hover { color: var(--text); }
+
+    /* ── Result ── */
+    .result-card {
+      background: linear-gradient(135deg, rgba(255,60,172,0.06), rgba(43,134,197,0.06));
+      border: 1px solid rgba(255,60,172,0.25);
+    }
+
+    .result-display {
+      font-size: clamp(26px, 5vw, 42px);
+      min-height: 72px;
+      word-break: break-all;
+      letter-spacing: 3px;
+      line-height: 1.7;
+      padding: 4px 0;
+    }
+
+    .result-row {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 6px;
+      margin-top: 14px;
+    }
+
+    .result-token {
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      animation: popIn 0.2s ease both;
+    }
+
+    .result-token .tok-emoji { font-size: 28px; line-height: 1; }
+    .result-token .tok-letter {
+      font-size: 10px;
+      color: var(--muted);
+      font-family: var(--mono);
+      margin-top: 4px;
+      letter-spacing: 0.1em;
+    }
+
+    .result-token.space-tok .tok-emoji {
+      font-size: 14px;
+      color: var(--muted);
+      letter-spacing: 0;
+      padding: 0 4px;
+    }
+
+    .result-placeholder { color: var(--muted); font-size: 14px; font-style: italic; }
+
+    .result-actions {
+      display: flex;
+      gap: 10px;
+      flex-wrap: wrap;
+      margin-top: 16px;
+    }
+
+    .btn-sm {
+      padding: 8px 16px;
+      font-size: 11px;
+      border-radius: 6px;
+      border: 1px solid rgba(255,60,172,0.3);
+      background: transparent;
+      color: var(--accent);
+      cursor: pointer;
+      font-family: var(--mono);
+      letter-spacing: 0.1em;
+      text-transform: uppercase;
+      transition: all 0.15s;
+    }
+
+    .btn-sm:hover { background: rgba(255,60,172,0.1); }
+    .btn-sm.success { border-color: #4ade80; color: #4ade80; }
+
+    .mode-badge {
+      display: inline-flex;
+      align-items: center;
+      gap: 6px;
+      font-size: 11px;
+      padding: 4px 12px;
+      border-radius: 20px;
+      margin-left: auto;
+    }
+
+    .mode-badge.encrypt { background: rgba(255,60,172,0.15); color: var(--accent); }
+    .mode-badge.decrypt { background: rgba(43,134,197,0.15); color: var(--accent3); }
+    .mode-badge .dot { width: 6px; height: 6px; border-radius: 50%; background: currentColor; animation: pulse 1.5s infinite; }
+
+    @keyframes popIn {
+      from { opacity: 0; transform: scale(0.6) translateY(6px); }
+      to   { opacity: 1; transform: scale(1) translateY(0); }
+    }
+
+    @keyframes fadeDown {
+      from { opacity: 0; transform: translateY(-20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes fadeUp {
+      from { opacity: 0; transform: translateY(20px); }
+      to   { opacity: 1; transform: translateY(0); }
+    }
+
+    @keyframes pulse {
+      0%, 100% { opacity: 1; }
+      50% { opacity: 0.4; }
+    }
+
+    @media (max-width: 560px) {
+      .btn { min-width: 100%; }
+    }
+  </style>
+</head>
+<body>
+<div class="container">
+
+  <header>
+    <div class="tag">🔐 Caesar Cipher</div>
+    <h1>EMOJI<br>CIPHER</h1>
+    <p class="subtitle">Each letter of the alphabet is represented by an emoji</p>
+  </header>
+
+  <!-- Alphabet Map -->
+  <div class="card">
+    <div class="card-label">Emoji Alphabet — current mapping</div>
+    <div class="alpha-map" id="alphaMap"></div>
+  </div>
+
+  <!-- Shift -->
+  <div class="card">
+    <div class="card-label">Shift Value</div>
+    <div class="shift-row">
+      <span style="color:var(--muted); font-size:13px;">Positions:</span>
+      <div class="shift-stepper">
+        <button class="step-btn" onclick="changeShift(-1)">−</button>
+        <input type="number" id="shift" class="shift-value" min="1" max="25" value="3" oninput="onShiftChange()">
+        <button class="step-btn" onclick="changeShift(1)">+</button>
+      </div>
+      <span style="color:var(--muted); font-size:12px;">1 – 25</span>
+    </div>
+    <div class="shift-dots" id="shiftDots"></div>
+  </div>
+
+  <!-- Input -->
+  <div class="card">
+    <div class="card-label">Input Text</div>
+    <textarea id="inputText" placeholder="Type letters to encrypt, or paste emojis to decrypt..." oninput="updateCount()"></textarea>
+    <div class="char-count"><span id="charCount">0</span> chars</div>
+    <div class="actions">
+      <button class="btn btn-encrypt" onclick="run('encrypt')">⬆︎ Encrypt → Emoji</button>
+      <button class="btn btn-decrypt" onclick="run('decrypt')">⬇︎ Decrypt → Text</button>
+      <button class="btn btn-clear" onclick="clearAll()">✕ Clear</button>
+    </div>
+  </div>
+
+  <!-- Output -->
+  <div class="card result-card">
+    <div class="card-label" style="display:flex; align-items:center;">
+      <span>Output</span>
+      <span id="modeBadge" class="mode-badge" style="display:none"></span>
+    </div>
+    <div id="resultRow" class="result-row">
+      <span class="result-placeholder">Your result will appear here...</span>
+    </div>
+    <div class="result-actions">
+      <button class="btn-sm" id="copyBtn" onclick="copyResult()">⎘ Copy</button>
+      <button class="btn-sm" onclick="swapToInput()">↩ Use as Input</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // 26 emojis — one per letter A–Z
+  const EMOJI_ALPHA = [
+    '😀','😃','😄','😁','😆','😅','😂','🤣',  // A–H
+    '😍','🥰','😘','😎','🤩','😜','😝','😛',  // I–P
+    '🤔','😏','😒','😞','😔','😟','😕','🙁',  // Q–X
+    '😮','😲'                                   // Y–Z
+  ];
+
+  let lastOutput = '';
+
+  function getShift() {
+    return Math.max(1, Math.min(25, parseInt(document.getElementById('shift').value) || 3));
+  }
+
+  // Build the alphabet display map
+  function buildAlphaMap() {
+    const shift = getShift();
+    const container = document.getElementById('alphaMap');
+    container.innerHTML = '';
+    for (let i = 0; i < 26; i++) {
+      const letter = String.fromCharCode(65 + i);
+      const shiftedIdx = (i + shift) % 26;
+      const emoji = EMOJI_ALPHA[i];        // plain letter → this emoji
+      const shiftedEmoji = EMOJI_ALPHA[shiftedIdx]; // encrypted → this emoji
+
+      const cell = document.createElement('div');
+      cell.className = 'alpha-cell';
+      cell.id = `cell-${letter}`;
+      cell.title = `${letter} encrypts to ${EMOJI_ALPHA[shiftedIdx]}`;
+      cell.innerHTML = `
+        <span class="emoji-rep">${shiftedEmoji}</span>
+        <span class="letter">${letter}</span>
+        <span class="shifted-letter">+${shift}</span>
+      `;
+      container.appendChild(cell);
+    }
+  }
+
+  function buildShiftDots() {
+    const shift = getShift();
+    const el = document.getElementById('shiftDots');
+    el.innerHTML = '';
+    for (let i = 0; i < 25; i++) {
+      const d = document.createElement('div');
+      d.className = 'shift-dot' + (i < shift ? ' active' : '');
+      el.appendChild(d);
+    }
+  }
+
+  function changeShift(d) {
+    const inp = document.getElementById('shift');
+    inp.value = Math.max(1, Math.min(25, (parseInt(inp.value) || 3) + d));
+    refresh();
+  }
+
+  function onShiftChange() {
+    refresh();
+  }
+
+  function refresh() {
+    buildAlphaMap();
+    buildShiftDots();
+  }
+
+  function updateCount() {
+    document.getElementById('charCount').textContent = document.getElementById('inputText').value.length;
+  }
+
+  // ── Core cipher ──
+
+  // Encrypt: text → emojis
+  function encrypt(text, shift) {
+    const tokens = [];
+    for (const ch of text) {
+      const upper = ch.toUpperCase();
+      const idx = upper.charCodeAt(0) - 65;
+      if (idx >= 0 && idx < 26) {
+        const shifted = (idx + shift) % 26;
+        tokens.push({ type: 'letter', emoji: EMOJI_ALPHA[shifted], letter: upper });
+      } else if (ch === ' ') {
+        tokens.push({ type: 'space' });
+      } else {
+        tokens.push({ type: 'passthrough', char: ch });
+      }
+    }
+    return tokens;
+  }
+
+  // Decrypt: emojis → text
+  function decrypt(text, shift) {
+    // Split input into emoji or regular chars
+    const segmenter = new Intl.Segmenter();
+    const segments = [...segmenter.segment(text)].map(s => s.segment);
+    const tokens = [];
+    for (const seg of segments) {
+      const idx = EMOJI_ALPHA.indexOf(seg);
+      if (idx !== -1) {
+        const original = (idx - shift + 26) % 26;
+        const letter = String.fromCharCode(65 + original);
+        tokens.push({ type: 'letter', emoji: seg, letter });
+      } else if (seg === ' ') {
+        tokens.push({ type: 'space' });
+      } else {
+        tokens.push({ type: 'passthrough', char: seg });
+      }
+    }
+    return tokens;
+  }
+
+  function renderTokens(tokens, mode) {
+    const row = document.getElementById('resultRow');
+    row.innerHTML = '';
+    let plainText = '';
+
+    tokens.forEach((tok, i) => {
+      const div = document.createElement('div');
+      div.style.animationDelay = `${Math.min(i * 25, 500)}ms`;
+
+      if (tok.type === 'letter') {
+        div.className = 'result-token';
+        if (mode === 'encrypt') {
+          div.innerHTML = `<span class="tok-emoji">${tok.emoji}</span>`;
+          plainText += tok.emoji;
+        } else {
+          div.innerHTML = `<span class="tok-emoji" style="font-size:28px; font-family:var(--mono); color:var(--text);">${tok.letter}</span>`;
+          plainText += tok.letter;
+        }
+      } else if (tok.type === 'space') {
+        div.className = 'result-token space-tok';
+        div.innerHTML = `<span class="tok-emoji">·</span>`;
+        plainText += ' ';
+      } else {
+        div.className = 'result-token';
+        div.innerHTML = `<span class="tok-emoji" style="font-size:22px">${tok.char}</span>`;
+        plainText += tok.char;
+      }
+      row.appendChild(div);
+    });
+
+    lastOutput = plainText;
+  }
+
+  function run(mode) {
+    const shift = getShift();
+    const text = document.getElementById('inputText').value;
+    if (!text.trim()) return;
+
+    const tokens = mode === 'encrypt' ? encrypt(text, shift) : decrypt(text, shift);
+    renderTokens(tokens, mode);
+
+    // Mode badge
+    const badge = document.getElementById('modeBadge');
+    badge.style.display = 'inline-flex';
+    badge.className = `mode-badge ${mode}`;
+    badge.innerHTML = `<span class="dot"></span>${mode === 'encrypt' ? '🔒 Encrypted' : '🔓 Decrypted'}`;
+
+    // Highlight relevant alpha cells
+    highlightCells(tokens, mode);
+  }
+
+  function highlightCells(tokens, mode) {
+    document.querySelectorAll('.alpha-cell').forEach(c => c.classList.remove('highlight'));
+    const letters = new Set(tokens.filter(t => t.type === 'letter').map(t => t.letter));
+    letters.forEach(l => {
+      const cell = document.getElementById(`cell-${l}`);
+      if (cell) cell.classList.add('highlight');
+    });
+    setTimeout(() => {
+      document.querySelectorAll('.alpha-cell').forEach(c => c.classList.remove('highlight'));
+    }, 2500);
+  }
+
+  function copyResult() {
+    if (!lastOutput) return;
+    navigator.clipboard.writeText(lastOutput).then(() => {
+      const btn = document.getElementById('copyBtn');
+      btn.textContent = '✓ Copied!';
+      btn.classList.add('success');
+      setTimeout(() => { btn.textContent = '⎘ Copy'; btn.classList.remove('success'); }, 2000);
+    });
+  }
+
+  function swapToInput() {
+    if (!lastOutput) return;
+    document.getElementById('inputText').value = lastOutput;
+    updateCount();
+    document.getElementById('inputText').scrollIntoView({ behavior: 'smooth' });
+  }
+
+  function clearAll() {
+    document.getElementById('inputText').value = '';
+    document.getElementById('resultRow').innerHTML = '<span class="result-placeholder">Your result will appear here...</span>';
+    document.getElementById('modeBadge').style.display = 'none';
+    lastOutput = '';
+    updateCount();
+  }
+
+  // Init
+  buildAlphaMap();
+  buildShiftDots();
+</script>
+</body>
+</html>
